@@ -391,7 +391,7 @@ vector<vector<bool>> SubsetSum_Tabulation(vector<int>& set)
 			}
 			else
 			{
-                /*, 현재 고려하고 있는 원소가 만들어야 하는 합보다 작거나 같다면, 해당 원소를 사용해서 합 j를 만들 수 있는지를 검사
+                /*, 현재 고려하고 있는 원소가 만들어야 하는 합보다 작거나 같다면, 해당 원소를 사용해서 합 sum를 만들 수 있는지를 검사
 
                 DP[i - 1][sum] : 이전까지 고려한 원소들로 이미 합 sum를 만들 수 있는지 여부
                 DP[i - 1][sum - set[i - 1]] : 이전까지 고려한 원소들로 합 sum - set[i - 1]을 만들 수 있는지 여부를 dp[i - 1][sum - set[i - 1]]에서 가져온다. 이후 set[i - 1]을 더하면 현재 고려 중인 원소를 사용한 합 j를 만들 수 있다.
@@ -403,5 +403,215 @@ vector<vector<bool>> SubsetSum_Tabulation(vector<int>& set)
 	}
 
 	return DP;
+}
+```
+## 문자열과 시퀀스에 대한 동적 계획법
+* 데이터 시퀀스의 패턴 문제
+* 프로그래머가 이러한 문제에서 동적 계획법을 사용하는 것은 주로 문자열 검색, 비교, 문자열 재구성 등의 문제와 관련이 있다.
+### 최장 공통 부분 시퀀스 문제
+* LCS, Lonest Common Subsequence
+* lcs.cpp
+* 동적 계획법의 유명한 예제 중 하나이다. 다음과 같이 정의됨.
+```
+두 개의 데이터 시퀀스가 주어질 때, 두 시퀀스에 공통으로 나타나는 가장 긴 부분 시퀀스는 무엇인가?
+A = "A L B O C N D G Z E Y S X T W"
+B = "1 2 L 4 5 O 7 8 N 9 0 G E 9 8 7 6 S 5 4 3 2 T"
+
+이 두 문자열에서 구할 수 있는 최장 공통 부분 시퀀스는 "LONGEST"이다.
+```
+* 부분집합의 합 문제와 마찬가지로, 문자열 길이를 n이라고 하면 2<sup>n</sup>개의 가능한 부분 문자열 집합이 있을 수 있다. 
+* 다만 여기서는 고려해야 할 시퀀스가 두 개임.
+* 그리고 두 시퀀스의 부분집합을 독립적으로 처리하는 것이 아니라, 두 부분집합을 서로 비교해야 함.
+<div><img src="./b1.jpg" width="300" /></div>
+
+* 여기서 단순히 연속되어 나타나는 문자 집합을 찾는 것이 아니라는 사실로부터 몇 가지 고려해야함.
+```
+1. 공통 부분 문자 시퀀스는 문자열 전체에서 다양한 형태의 배치에 의해 여러 번 나타날 수 있다.
+2. 특정 위치에서 시작하는 공통 부분 시퀀스가 여러 개 존재할 수 있다.
+```
+* 문자열 A와 B에서 특정 문자의 위치를 가리키는 두 개의 인덱스 i와 j가 필요함. 그리고 지금까지 찾은 공통 부분 시퀀스(문자열)도 저장하고 있어야 함.
+```
+/*두 문자열 중 하나라도 맨 마지막에 도달하면 비교 대상이 없어짐*/
+만약 i가 A의 길이보다 커지거나 또는 j가 B의 길이보다 커지면 :
+    - 재귀를 종료하고, 부분 시퀀스의 길이를 반환한다.
+
+만약 A[i] = B[j]이면:
+    - 부분 시퀀스 길이를 1만큼 증가
+    - i와 j를 각각 1씩 증가함
+그렇지 않으면:
+    옵션 1) (i + 1)번째와 j번째 문자에 대해 검사를 진행한다.
+    옵션 2) i번째와 (j + 1)번째 문자에 대해 검사를 진행한다.
+
+    이 상태의 LCS는 옵션 1 및 옵션 2의 최댓값과 같다.
+```
+* 비교한 두 문자가 같지 않다면, A 문자열의 다음 문자를 살펴보거나 또는 B 문자열의 다음 문자를 살펴봐야 함.
+* 이때 두 문자열의 인덱스 i와 j를 동시에 증가시키는 경우는 따로 고려하지 않았는데, 이러한 경우는 어차피 추후에 만나게 되기 때문에
+<div><img src="./b2.jpg" width="300" /></div>
+
+* 위에서 중복되는 문제들은 같은 색깔로 나타낸 것
+* 위 문제에서 최적 부분 구조는 아직 명확하진 않지만 다음과 같은 기본적인 일반화 수행할 수 있음.
+```
+* 같은 길이의 부분집합만 비교하면 된다.
+* 특정 상태에서 다음 상태로 전이되기 위해서는 i 또는 j가 증가되거나, 또는 i와 j가 같이 증가해야 한다.
+* 두 문자열 중 어느 하나라도 맨 마지막에 도달하면 탐색이 끝난다.
+```
+#### 전수 조사 코드
+```c++
+
+vector<vector<pair<int, int>>> found;
+
+int LCS_BruteForce(string A, string B, int i, int j, 
+	               vector<pair<int, int>> subsequence)
+{
+	// 만약 i가 A의 길이보다 커지거나 또는 j가 B의 길이보다 커지면:
+	if (i >= A.size() || j >= B.size())
+	{
+		found.push_back(subsequence);
+
+		// 재귀를 종료하고 부분 시퀀스의 길이를 반환합니다.
+		return subsequence.size();
+	}
+
+	// 만약 A[i] = B[j] 이면:
+	if (A[i] == B[j])
+	{
+		// 부분 시퀀스 길이를 1만큼 증가합니다.
+		subsequence.push_back({i, j});
+
+		// i와 j를 각각 1씩 증가합니다.
+		return LCS_BruteForce(A, B, i + 1, j + 1, subsequence);
+	}
+
+	/* 그렇지 않으면:
+	
+	   옵션 1) (i + 1)번째와 j번째 문자에 대해 검사를 진행합니다.
+	   옵션 2) i번째와 (j + 1)번째 문자에 대해 검사를 진행합니다.
+
+	   이 상태의 LCS는 옵션 1 및 옵션 2의 최댓값과 같습니다.
+	 */
+
+	return max(LCS_BruteForce(A, B, i + 1, j, subsequence),
+		LCS_BruteForce(A, B, i, j + 1, subsequence));
+}
+
+int main()
+{
+	string A, B;
+	cin >> A >> B;
+/*
+ABCX ACYXB 입력
+*/
+	int LCS = LCS_BruteForce(A, B, 0, 0, {});
+	cout << A << "와 " << B << "의 최장 공통 부분 시퀀스 길이: " << LCS << endl;
+}
+```
+#### 최적화 첫 단계 : 최적 부분 구조 찾기
+* 재귀적인 방법을 사용할 때 중복되는 연산이 많이 발생할 수 있다. 이를 최적화하기 위해 다음과 같은 접근 방법을 사용할 수 있습니다.
+```
+* 두 문자열 중 하나라도 빈 문자열이면, 그 둘 사이의 LCS는 0
+* 그렇지 않은 경우에는 두 문자열의 마지막 문자를 비교한다.
+    - 만약 두 문자가 같다면, 두 문자열의 마지막 문자를 제외한 부분 문자열에서 구한 LCS에 1을 더한 값이 현재 LCS의 값이다.
+    - 만약 두 문자가 다르다면, 두 문자열의 마지막 문자를 제외한 부분 문자열에서 구한 LCS 중에서 최대값이 현재 LCS의 값이다.
+```
+##### 메모이제이션 기법을 이용하여 모든 단계의 결과를 2차원 벡터에 저장할 수 있음.
+* 이때 첫 번째 차원의 크기는 A 문자열 길이와 같고, 두번째는 B 문자열 길이와 같음.
+* 기저 조건을 제외하고, memo[i - 1][j - 1] 위치에 이미 계산된 결과가 저장되어 있는 지를 확인함.
+* 만약 이미 저장되어 있다면 그 값 그대로 반환, 그렇지 않으면 다시 앞에 정의한 로직을 이용하여 재귀적으로 값을 계산하여 캐시에 저장함.
+```c++
+/*
+vector<vector<int>> memo(A.size(), vector<int>(B.size(), UNKNOWN));
+LCS = LCS_Memoization(A, B, A.size(), B.size(), memo);
+*/
+int LCS_Memoization(string A, string B, int i, int j, 
+	                vector<vector<int>>& memo)
+{
+	// 기저 조건 - 빈 문자열에 대해서는 0을 반환
+	if (i == 0 || j == 0)
+	{
+		return 0;
+	}
+
+	// 두 문자열의 부분 문자열에 대해 결과가 저장되어 있으면 반환
+	if (memo[i - 1][j - 1] != UNKNOWN)
+	{
+		return memo[i - 1][j - 1];
+	}
+
+	// A와 B의 두 부분 문자열에서 맨 마지막 문자가 같은지 확인
+	if (A[i - 1] == B[j - 1])
+	{
+		
+		// 마지막 한 문자를 제외한 문자열로부터 구한 LCS 길이에 1을 더한 것과 같음
+
+		memo[i - 1][j - 1] = 1 + LCS_Memoization(A, B, i - 1, j - 1, memo);
+
+		// 테이블에 저장된 결과를 반환
+		return memo[i - 1][j - 1];
+	}
+
+	// A와 B의 두 부분 문자열에서 맨 마지막 문자가 같지 않다면
+	// A의 부분 문자열에서 마지막 문자를 제외한 것과 B의 부분 문자열에서 구한 LCS 길이,
+	// B의 부분 문자열에서 마지막 문자를 제외한 것과 A의 부분 문자열에서 구한 LCS 길이 중
+	// 최댓값을 선택하여 지정
+
+	memo[i - 1][j - 1] = max(LCS_Memoization(A, B, i - 1, j, memo),
+		LCS_Memoization(A, B, i, j - 1, memo));
+
+	return memo[i - 1][j - 1];
+}
+```
+##### 타뷸레이션으로 최장 공통 부분 시퀀스 찾기 
+```c++
+/*
+string lcs = LCS_Tabulation(A, B);
+LCS = lcs.size();
+*/
+string ReconstructLCS(vector<vector<int>> DP, string A, string B, int i, int j)
+{
+	if (i == 0 || j == 0)
+	{
+		return "";
+	}
+
+	if (A[i - 1] == B[j - 1])
+	{
+		return ReconstructLCS(DP, A, B, i - 1, j - 1) + A[i - 1];
+	}
+	else if (DP[i - 1][j] > DP[i][j - 1])
+	{
+		return ReconstructLCS(DP, A, B, i - 1, j);
+	}
+	else
+	{
+		return ReconstructLCS(DP, A, B, i, j - 1);
+	}
+}
+
+string LCS_Tabulation(string A, string B)
+{
+	vector<vector<int>> DP(A.size() + 1, vector<int>(B.size() + 1));
+
+	for (int i = 0; i <= A.size(); i++)
+	{
+		for (int j = 0; j <= B.size(); j++)
+		{
+			if (i == 0 || j == 0)
+			{
+				DP[i][j] = 0;
+			}
+			else if (A[i - 1] == B[j - 1])
+			{
+				DP[i][j] = DP[i - 1][j - 1] + 1;
+			}
+			else
+			{
+				DP[i][j] = max(DP[i - 1][j], DP[i][j - 1]);
+			}
+		}
+	}
+
+	string lcs = ReconstructLCS(DP, A, B, A.size(), B.size());
+
+	return lcs;
 }
 ```
